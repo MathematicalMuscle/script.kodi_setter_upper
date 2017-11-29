@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<addons>
+  <addon addonid="repository.mathematical_muscle" zippath="special://home/addons/script.kodi_setter_upper/zips/repository.mathematical_muscle-1.0.0.zip">
+  </addon>
+  <addon addonid="script.remote_downloader" repo="repository.mathematical_muscle">
+  </addon>
+  <addon addonid="script.kodi_setter_upper" repo="repository.mathematical_muscle">
+    <setting id="dialog" value="false" />
+  </addon>
+</addons>

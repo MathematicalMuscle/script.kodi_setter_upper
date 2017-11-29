@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<keymap>
+  <Global>
+    <keyboard>
+      <rewind>RunScript(special://userdata/addon_data/script.kodi_setter_upper/scripts/up.py, 7)</rewind>
+      <fastforward>RunScript(special://userdata/addon_data/script.kodi_setter_upper/scripts/down.py, 7)</fastforward>
+    </keyboard>
+  </Global>
+  <FullscreenVideo>
+    <keyboard>
+      <up>volampup</up>
+      <down>volampdown</down>
+      <key id="61453">runaddon(script.remote_downloader, "{'action':'download_now_playing'}")</key>
+    </keyboard>
+  </FullscreenVideo>
+</keymap>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<settings>
+  <setting id="general.settinglevel" value="3" />
+  <setting id="filelists.showhidden" value="true" />
+  <setting id="services.webserver" value="true" />
+  <setting id="services.esallinterfaces" value="true" />
+  <setting id="services.upnplookforexternalsubtitles" value="false" />
+  <setting id="services.upnprenderer" value="true" />
+  <setting id="addons.unknownsources" value="true" />
+  <setting id="audiooutput.guisoundmode" value="0" />
+</settings>
