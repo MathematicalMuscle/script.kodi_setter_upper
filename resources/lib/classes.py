@@ -200,11 +200,13 @@ class Source(object):
                 tree = ET.parse(kodi_sources_xml)
                 root = tree.getroot()
                 branch = root.find(self.sourcetype)
+                dialogger(self.path)
                 
                 if self.path not in [s.text for source in branch for s in source if s.tag == 'path']:
                     branch.insert(-1, self.element)
                     
                     dialogger("Writing `userdata/sources.xml`")
+                    indent(tree.getroot())
                     tree.write(kodi_sources_xml, encoding='UTF-8')
                     
                     with open(kodi_sources_xml, 'r+') as f:
@@ -218,3 +220,20 @@ class Source(object):
                             
                 else:
                     dialogger("No changes to `userdata/sources.xml`")
+
+
+def indent(elem, level=0):
+    # http://stackoverflow.com/a/33956544
+    i = "\n" + level*"    "
+    if len(elem):
+        if not elem.text or not elem.text.strip():
+            elem.text = i + "    "
+        if not elem.tail or not elem.tail.strip():
+            elem.tail = i
+        for elem in elem:
+            indent(elem, level+1)
+        if not elem.tail or not elem.tail.strip():
+            elem.tail = i
+    else:
+        if level and (not elem.tail or not elem.tail.strip()):
+            elem.tail = i

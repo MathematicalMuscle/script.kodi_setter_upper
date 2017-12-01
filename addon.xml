@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon id="script.kodi_setter_upper" name="Kodi Setter-Upper" version="0.0.9" provider-name="Mathematical Muscle">
+<addon id="script.kodi_setter_upper" name="Kodi Setter-Upper" version="0.0.10" provider-name="Mathematical Muscle">
     <requires>
         <import addon="xbmc.python" version="2.14.0"/>
         <import addon="script.common.plugin.cache" version="0.9.1" />
@@ -15,14 +15,15 @@
         <language>en</language>
     </extension>
     <news>
-        v0.0.1 (2017-07-10) - Initial commit
-        v0.0.2 (2017-07-10) - Added 'verbose' setting
-        v0.0.3 (2017-07-10) - Modularized the code
-        v0.0.4 (2017-07-12) - Fixed handling of Confluence settings
-        v0.0.5 (2017-07-12) - Further improved handling of Confluence settings (addon shortcuts)
-        v0.0.6 (2017-10-07) - Implemented classes and config files
-        v0.0.7 (2017-11-29) - Implemented JSON-RPC functionality
-        v0.0.8 (2017-11-29) - Public debut
-        v0.0.9 (2017-12-01) - Added uninstall capability
+        v0.0.01 (2017-07-10) - Initial commit
+        v0.0.02 (2017-07-10) - Added 'verbose' setting
+        v0.0.03 (2017-07-10) - Modularized the code
+        v0.0.04 (2017-07-12) - Fixed handling of Confluence settings
+        v0.0.05 (2017-07-12) - Further improved handling of Confluence settings (addon shortcuts)
+        v0.0.06 (2017-10-07) - Implemented classes and config files
+        v0.0.07 (2017-11-29) - Implemented JSON-RPC functionality
+        v0.0.08 (2017-11-29) - Public debut
+        v0.0.09 (2017-12-01) - Added uninstall capability
+        v0.0.10 (2017-12-01) - Improved XML formatting for sources
     </news>
 </addon>
