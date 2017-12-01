@@ -4,18 +4,13 @@
 
 
 import os
-import sys
 import xbmc
 import xbmcaddon
 import xbmcgui
 import xbmcvfs
 
-import os
-import xbmc
-import xbmcaddon
-import xbmcvfs
-
 import datetime
+import shutil
 from sqlite3 import dbapi2
 import xml.etree.ElementTree as ET
 import zipfile
@@ -41,7 +36,7 @@ dummy_addon_xml += '</addon>'
 
 
 class Addon(object):
-    def __init__(self, addonid, zippath=None, repo=None):
+    def __init__(self, addonid, zippath=None, repo=None, uninstall=None):
         self.addonid = addonid
         self.zippath = zippath
         self.repo = repo
@@ -49,13 +44,18 @@ class Addon(object):
         self.enabled = self._isenabled()
         self.installed = True if self.enabled else self._isinstalled()
 
-        self.install()
+        if uninstall is None:
+            self.install()
+        else:
+            self.uninstall()
 
     def setSetting(self, id, value):
-        xbmcaddon.Addon(self.addonid).setSetting(id, value)
+        if self.installed:
+            xbmcaddon.Addon(self.addonid).setSetting(id, value)
 
     def getSetting(self, id):
-        return xbmcaddon.Addon(self.addonid).getSetting(id)
+        if self.installed:
+            return xbmcaddon.Addon(self.addonid).getSetting(id)
 
     def install(self):
         if self.enabled:
@@ -111,10 +111,19 @@ class Addon(object):
 
         self.enabled = True
         self.installed = True
+        
+    def uninstall(self):
+        if self.installed:
+            if xbmcvfs.exists(xbmc.translatePath('special://home/addons/{0}/'.format(self.addonid))):
+                xbmcgui.Dialog().ok('KSU', "rmtree")
+                shutil.rmtree(xbmc.translatePath('special://home/addons/{0}/'.format(self.addonid)), ignore_errors=True)
+            xbmc.executebuiltin('XBMC.UpdateLocalAddons()')
+            self.enabled = False
+            self.installed = False
 
 
 class Skin(Addon):
-    def __init__(self, addonid, zippath=None, repo=None):
+    def __init__(self, addonid, zippath=None, repo=None, uninstall=None):
         self.addonid = addonid
         self.zippath = zippath
         self.repo = repo
@@ -122,22 +131,27 @@ class Skin(Addon):
         self.enabled = self._isenabled()
         self.installed = True if self.enabled else self._isinstalled()
 
-        self.install()
-
-        if not self.iscurrent():
-            self.set_as_current()
+        if uninstall is None:
+            self.install()
+            if not self.iscurrent():
+                self.set_as_current()
+        else:
+            if not self.iscurrent():
+                self.uninstall()
 
     def iscurrent(self):
         return xbmc.translatePath('special://skin').strip(os.sep).split(os.sep)[-1] == self.addonid
 
     def set_as_current(self):
-        xbmc.executeJSONRPC('{"jsonrpc":"2.0","method":"Settings.SetSettingValue","id":1,"params":{"setting":"lookandfeel.skin","value":"' + self.addonid + '"}}')
+        if self.installed:
+            xbmc.executeJSONRPC('{"jsonrpc":"2.0","method":"Settings.SetSettingValue","id":1,"params":{"setting":"lookandfeel.skin","value":"' + self.addonid + '"}}')
 
     def setSetting(self, id, value):
-        if value in ['True', 'False']:
-            xbmc.executebuiltin("Skin.SetBool({0}, {1})".format(id, value))
-        else:
-            xbmc.executebuiltin("Skin.SetString({0}, {1})".format(id, value))
+        if self.iscurrent():
+            if value in ['True', 'False']:
+                xbmc.executebuiltin("Skin.SetBool({0}, {1})".format(id, value))
+            else:
+                xbmc.executebuiltin("Skin.SetString({0}, {1})".format(id, value))
 
     #def getSetting(self, id):
     #    return xbmcaddon.Addon(self.addonid).getSetting(id)
