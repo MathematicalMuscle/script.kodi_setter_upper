@@ -36,7 +36,7 @@ dummy_addon_xml += '</addon>'
 
 
 class Addon(object):
-    def __init__(self, addonid, zippath=None, repo=None, uninstall=None):
+    def __init__(self, addonid, zippath=None, repo=None, uninstall=None, disable=None):
         self.addonid = addonid
         self.zippath = zippath
         self.repo = repo
@@ -46,6 +46,9 @@ class Addon(object):
 
         if uninstall is None:
             self.install()
+            
+            if disable is not None:
+                self._disable()
         else:
             self.uninstall()
 
@@ -98,6 +101,10 @@ class Addon(object):
         xbmc.executeJSONRPC('{"jsonrpc": "2.0", "method": "Addons.SetAddonEnabled", "params": {"addonid": "' + self.addonid + '", "enabled": true}, "id": 1}')
         self.enabled = True
 
+    def _disable(self):
+        xbmc.executeJSONRPC('{"jsonrpc": "2.0", "method": "Addons.SetAddonEnabled", "params": {"addonid": "' + self.addonid + '", "enabled": false}, "id": 1}')
+        self.enabled = True
+
     def _add_to_database(self):
         conn = dbapi2.connect(xbmc.translatePath('special://profile/Database/Addons27.db'))
         conn.text_factory = str
@@ -123,7 +130,7 @@ class Addon(object):
 
 
 class Skin(Addon):
-    def __init__(self, addonid, zippath=None, repo=None, uninstall=None):
+    def __init__(self, addonid, zippath=None, repo=None, uninstall=None, disable=None):
         self.addonid = addonid
         self.zippath = zippath
         self.repo = repo
@@ -133,8 +140,12 @@ class Skin(Addon):
 
         if uninstall is None:
             self.install()
+            
             if not self.iscurrent():
-                self.set_as_current()
+                if disable is not None:
+                    self._disable()
+                else:
+                    self.set_as_current()
         else:
             if not self.iscurrent():
                 self.uninstall()

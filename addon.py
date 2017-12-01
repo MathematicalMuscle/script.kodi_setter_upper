@@ -74,12 +74,12 @@ if __name__ == '__main__':
             params[str(arg.split('=')[0])] = str(arg.split('=')[1])
             
         if params.get('ksu_class') == 'Addon' and 'addonid' in params:
-            x = classes.Addon(params['addonid'], params.get('zippath'), params.get('repo'), params.get('uninstall'))
+            x = classes.Addon(params['addonid'], params.get('zippath'), params.get('repo'), params.get('uninstall'), params.get('disable'))
             if 'id' in params and 'value' in params:
                 x.setSetting(params['id'], params['value'])
                 
         elif params.get('ksu_class') == 'Skin' and 'addonid' in params:
-            x = classes.Skin(params['addonid'], params.get('zippath'), params.get('repo'), params.get('uninstall'))
+            x = classes.Skin(params['addonid'], params.get('zippath'), params.get('repo'), params.get('uninstall'), params.get('disable'))
             if 'id' in params and 'value' in params:
                 x.setSetting(params['id'], params['value'])
             
