@@ -12,45 +12,56 @@ import xbmcvfs
 import datetime
 import shutil
 from sqlite3 import dbapi2
+import urllib
 import xml.etree.ElementTree as ET
 import zipfile
 
 from dialogger import dialogger
 
 
-dummy_addon_xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-dummy_addon_xml += ''
-dummy_addon_xml += '<addon id="{0}" name="{0}" version="0.0.0" provider-name="Mathematical Muscle">'
-dummy_addon_xml += '    <requires>'
-dummy_addon_xml += '        <import addon="xbmc.python" version="2.14.0"/>'
-dummy_addon_xml += '    </requires>'
-dummy_addon_xml += '    <extension point="xbmc.python.script" library="addon.py">'
-dummy_addon_xml += '    </extension>'
-dummy_addon_xml += '    <extension point="xbmc.addon.metadata">'
-dummy_addon_xml += '        <platform>all</platform>'
-dummy_addon_xml += '        <summary lang="en">Placeholder</summary>'
-dummy_addon_xml += '        <description lang="en">Placeholder</description>'
-dummy_addon_xml += '        <language>en</language>'
-dummy_addon_xml += '    </extension>'
+dummy_addon_xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
+dummy_addon_xml += '<addon id="{0}" name="{0}" version="0.0.0" provider-name="Mathematical Muscle">\n'
+dummy_addon_xml += '    <requires>\n'
+dummy_addon_xml += '        <import addon="xbmc.python" version="2.14.0"/>\n'
+dummy_addon_xml += '    </requires>\n'
+dummy_addon_xml += '    <extension point="xbmc.python.script" library="addon.py">\n'
+dummy_addon_xml += '    </extension>\n'
+dummy_addon_xml += '    <extension point="xbmc.addon.metadata">\n'
+dummy_addon_xml += '        <platform>all</platform>\n'
+dummy_addon_xml += '        <summary lang="en">Placeholder</summary>\n'
+dummy_addon_xml += '        <description lang="en">Placeholder</description>\n'
+dummy_addon_xml += '        <language>en</language>\n'
+dummy_addon_xml += '    </extension>\n'
 dummy_addon_xml += '</addon>'
 
 
 class Addon(object):
-    def __init__(self, addonid, zippath=None, repo=None, uninstall=None, disable=None):
+    def __init__(self, addonid, zippath=None, repo=None, url=None, uninstall=None, disable=None):
         self.addonid = addonid
         self.zippath = zippath
         self.repo = repo
-
-        self.enabled = self._isenabled()
-        self.installed = True if self.enabled else self._isinstalled()
-
-        if uninstall is None:
-            self.install()
+        self.url = url
+        
+        self.requires = None
+        
+        if self.addonid == 'xbmc.python':
+            self.enabled = True
+            self.installed = True
             
-            if disable is not None:
-                self._disable()
         else:
-            self.uninstall()
+            self.enabled = self._isenabled()
+            self.installed = True if self.enabled else self._isinstalled()
+
+            # if it's not already installed and it's not supposed to be uninstalled, then install it
+            if uninstall is None:
+                self.install()
+                
+                # if it's supposed to be disabled, then disable it
+                if disable is not None:
+                    self._disable()
+            else:
+                # if it's supposed to be uninstalled, then uninstall it
+                self.uninstall()
 
     def setSetting(self, id, value):
         if self.installed:
@@ -59,33 +70,48 @@ class Addon(object):
     def getSetting(self, id):
         if self.installed:
             return xbmcaddon.Addon(self.addonid).getSetting(id)
+            
+    def getVersion(self):
+        if self.installed:
+            return xbmcaddon.Addon(self.addonid).getAddonInfo('version')
+        else:
+            return None
 
     def install(self):
-        if self.enabled:
+        # 1) install from a URL
+        if self.url is not None:
+            self._download()
+            self._zip_install()
+            
+        # 2) it's already installed and enabled ==> do nothing
+        elif self.enabled:
             return
 
+        # 3) it's already installed ==> enable it
         elif self.installed:
             self._enable()
             return
 
+        # 4) the `addon.xml` file already exists ==> install and enable the addon
         elif xbmcvfs.exists(xbmc.translatePath('special://home/addons/{0}/addon.xml'.format(self.addonid))):
             self._add_to_database()
 
-        elif self.repo is not None and Addon(self.repo).enabled:
-            if not xbmcvfs.exists(xbmc.translatePath('special://home/addons/{0}'.format(self.addonid))):
-                xbmcvfs.mkdir(xbmc.translatePath('special://home/addons/{0}'.format(self.addonid)))
-
-            with open(xbmc.translatePath('special://home/addons/{0}/addon.xml'.format(self.addonid)), 'w') as f:
-                f.write(dummy_addon_xml.format(self.addonid))
-
-            self._add_to_database()
-            xbmc.executebuiltin('UpdateAddonRepos')
-
+        # 5) install from a zip file
         elif self.zippath is not None and xbmcvfs.exists(xbmc.translatePath(self.zippath)):
-            z_in = zipfile.ZipFile(xbmc.translatePath(self.zippath), 'r')
-            z_out = xbmc.translatePath('special://home/addons')
-            z_in.extractall(z_out)
-            self._add_to_database()
+            self._zip_install()
+
+        # 6) install a dummy addon and update it from the repos
+        else:
+            self._repo_install()
+        
+    def uninstall(self):
+        if self.installed:
+            if xbmcvfs.exists(xbmc.translatePath('special://home/addons/{0}/'.format(self.addonid))):
+                shutil.rmtree(xbmc.translatePath('special://home/addons/{0}/'.format(self.addonid)), ignore_errors=True)
+                
+            xbmc.executebuiltin('XBMC.UpdateLocalAddons()')
+            self.enabled = False
+            self.installed = False
 
     def _isenabled(self):
         enabled_addons = eval(xbmc.executeJSONRPC('{"jsonrpc": "2.0", "method": "Addons.GetAddons", "params": {"enabled": true}, "id": 1}'))['result']
@@ -106,27 +132,93 @@ class Addon(object):
         self.enabled = True
 
     def _add_to_database(self):
-        conn = dbapi2.connect(xbmc.translatePath('special://profile/Database/Addons27.db'))
-        conn.text_factory = str
+        # if all of its requirements are satisfied, go ahead and add it to the database
+        self._get_dependencies()                        
+        if self.requires is not None and all([Addon(a).installed for a in self.requires]) and all([Addon(a).getVersion() != '0.0.0' for a in self.requires]):
+            conn = dbapi2.connect(xbmc.translatePath('special://profile/Database/Addons27.db'))
+            conn.text_factory = str
 
-        now = datetime.datetime.now()
-        date_time = str(now).split('.')[0]
-        sql = 'REPLACE INTO installed (addonID,enabled,installDate) VALUES(?,?,?)'
-        conn.execute(sql, (self.addonid, 1, date_time))
-        conn.commit()
-        xbmc.executebuiltin('XBMC.UpdateLocalAddons()')
-
-        self.enabled = True
-        self.installed = True
-        
-    def uninstall(self):
-        if self.installed:
-            if xbmcvfs.exists(xbmc.translatePath('special://home/addons/{0}/'.format(self.addonid))):
-                xbmcgui.Dialog().ok('KSU', "rmtree")
-                shutil.rmtree(xbmc.translatePath('special://home/addons/{0}/'.format(self.addonid)), ignore_errors=True)
+            now = datetime.datetime.now()
+            date_time = str(now).split('.')[0]
+            sql = 'REPLACE INTO installed (addonID,enabled,installDate) VALUES(?,?,?)'
+            conn.execute(sql, (self.addonid, 1, date_time))
+            conn.commit()
             xbmc.executebuiltin('XBMC.UpdateLocalAddons()')
-            self.enabled = False
-            self.installed = False
+
+            self.enabled = True
+            self.installed = True
+        
+    def _repo_install(self):
+        # if the addon folder doesn't exist, create it
+        if not xbmcvfs.exists(xbmc.translatePath('special://home/addons/{0}'.format(self.addonid))):
+            xbmcvfs.mkdir(xbmc.translatePath('special://home/addons/{0}'.format(self.addonid)))
+
+        # if an `addon.xml` doesn't exist, create a dummy one
+        with open(xbmc.translatePath('special://home/addons/{0}/addon.xml'.format(self.addonid)), 'w') as f:
+            f.write(dummy_addon_xml.format(self.addonid))
+
+        self._add_to_database()
+        
+        # try to update the addon
+        xbmc.executebuiltin('UpdateAddonRepos')
+        xbmc.executebuiltin('XBMC.UpdateLocalAddons()')
+        
+        # if the dummy addon didn't update from a repo, then uninstall it
+        try:
+            if self.getVersion() == '0.0.0':
+                self.uninstall()
+        except:
+            pass
+        
+    def _zip_install(self):
+        # make sure the zip file contains an `addon.xml` file
+        z_in = zipfile.ZipFile(xbmc.translatePath(self.zippath), 'r')
+        namelist = z_in.namelist()
+        addon_xml_list = sorted([z for z in namelist if z.endswith('addon.xml')], key=lambda x: len(x))
+        
+        if len(addon_xml_list) > 0:
+            prefix = addon_xml_list[0][:-9]
+            
+            # unzip the contents into the addon's folder            
+            if prefix == '':
+                path = xbmc.translatePath('special://home/addons/{0}'.format(self.addonid))
+                z_in.extractall(path)                
+            else:
+                path = xbmc.translatePath('special://home/addons')
+                z_in.extractall(path)
+                xbmcvfs.rename(xbmc.translatePath('special://home/addons/{0}'.format(prefix)), xbmc.translatePath('special://home/addons/{0}'.format(self.addonid)))
+                
+            self._add_to_database()
+    
+    def _download(self):
+        # https://github.com/tvaddonsco/plugin.program.indigo/blob/master/installer.py#L987
+        url = self.url
+        
+        dp = xbmcgui.DialogProgress()
+        dp.create("Download Progress:", "", '', 'Please Wait')
+        
+        self.zippath = 'special://temp/{0}.zip'.format(self.addonid)
+        dest = xbmc.translatePath(self.zippath)
+        if xbmcvfs.exists(dest):
+            xbmcvfs.delete(dest)
+            
+        dp.update(0, "Downloading: " + self.addonid, '', 'Please Wait')
+        urllib.urlretrieve(url, dest, lambda nb, bs, fs, url=url: _pbhook(nb, bs, fs, url, dp))
+        
+    def _get_dependencies(self):     
+        addon_xml = xbmc.translatePath('special://home/addons/{0}/addon.xml'.format(self.addonid))
+        
+        if xbmcvfs.exists(addon_xml):
+            tree = ET.parse(addon_xml)
+            root = tree.getroot()
+            
+            requires = root.find('requires')
+            if requires is not None:
+                self.requires = [r.attrib['addon'] for r in requires]
+            else:
+                self.requires = []
+        else:
+            self.requires = None
 
 
 class Skin(Addon):
@@ -248,3 +340,16 @@ def indent(elem, level=0):
     else:
         if level and (not elem.tail or not elem.tail.strip()):
             elem.tail = i
+
+
+def _pbhook(numblocks, blocksize, filesize, url, dp):
+    # https://github.com/tvaddonsco/plugin.program.indigo/blob/master/installer.py#L995
+    try:
+        percent = min((numblocks * blocksize * 100) / filesize, 100)
+        dp.update(percent)
+    except:
+        percent = 100
+        dp.update(percent)
+    if dp.iscanceled():
+        raise Exception("Canceled")
+        dp.close()
