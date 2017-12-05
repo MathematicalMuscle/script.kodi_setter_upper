@@ -174,7 +174,6 @@ class Addon(object):
             if self.getVersion() == '0.0.0':
                 self.uninstall()
         except:
-            xbmcgui.Dialog().ok(self.addonid, '`getVersion()` exception')
             pass
         
     def _zip_install(self):
