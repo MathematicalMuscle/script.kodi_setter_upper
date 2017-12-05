@@ -49,6 +49,7 @@ class Addon(object):
             self.installed = True
             
         else:
+            xbmcgui.Dialog().ok(self.addonid, self.getVersion())
             self.enabled = self._isenabled()
             self.installed = True if self.enabled else self._isinstalled()
 
@@ -72,8 +73,11 @@ class Addon(object):
             return xbmcaddon.Addon(self.addonid).getSetting(id)
             
     def getVersion(self):
-        if self.installed:
-            return xbmcaddon.Addon(self.addonid).getAddonInfo('version')
+        addon_xml = xbmc.translatePath('special://home/addons/{0}/addon.xml'.format(self.addonid))
+        if xbmcvfs.exists(addon_xml):
+            tree = ET.parse(addon_xml)
+            root = tree.getroot()
+            return root.attrib['version']
         else:
             return None
 
@@ -105,6 +109,7 @@ class Addon(object):
             self._repo_install()
         
     def uninstall(self):
+        xbmcgui.Dialog().ok('ksu', 'Uninstalling {0}'.format(self.addonid))
         if self.installed:
             if xbmcvfs.exists(xbmc.translatePath('special://home/addons/{0}/'.format(self.addonid))):
                 shutil.rmtree(xbmc.translatePath('special://home/addons/{0}/'.format(self.addonid)), ignore_errors=True)
@@ -135,6 +140,7 @@ class Addon(object):
         # if all of its requirements are satisfied, go ahead and add it to the database
         self._get_dependencies()                        
         if self.requires is not None and all([Addon(a).installed for a in self.requires]) and all([Addon(a).getVersion() != '0.0.0' for a in self.requires]):
+            xbmcgui.Dialog().ok('ksu', 'Adding {0} to database'.format(self.addonid))
             conn = dbapi2.connect(xbmc.translatePath('special://profile/Database/Addons27.db'))
             conn.text_factory = str
 
@@ -168,6 +174,7 @@ class Addon(object):
             if self.getVersion() == '0.0.0':
                 self.uninstall()
         except:
+            xbmcgui.Dialog().ok(self.addonid, '`getVersion()` exception')
             pass
         
     def _zip_install(self):
