@@ -70,17 +70,22 @@ class Addon(object):
     @property
     def exists(self):
         return xbmcvfs.exists(xbmc.translatePath('special://home/addons/{0}/addon.xml'.format(self.addonid))) or self.addonid == 'xbmc.python'
+        
+    @property
+    def meets_dependencies(self):
+        self._get_dependencies()
+        return self.dependencies is not None and all([Addon(a).installed for a in self.dependencies]) # and all([Addon(a).getVersion() != '0.0.0' for a in self.dependencies])
 
     def setSetting(self, id, value):
-        if self.installed:
+        if self.enabled:
             xbmcaddon.Addon(self.addonid).setSetting(id, value)
 
     def getSetting(self, id):
-        if self.installed:
+        if self.enabled:
             return xbmcaddon.Addon(self.addonid).getSetting(id)
             
     def getVersion(self):
-        if self.installed:
+        if self.enabled:
             return xbmcaddon.Addon(self.addonid).getAddonInfo('version')
         #if self.exists:
         #    tree = ET.parse(addon_xml)
@@ -138,8 +143,9 @@ class Addon(object):
         return self.addonid in all_addons
 
     def _enable(self):
-        xbmc.executeJSONRPC('{"jsonrpc": "2.0", "method": "Addons.SetAddonEnabled", "params": {"addonid": "' + self.addonid + '", "enabled": true}, "id": 1}')
-        self.enabled = True
+        if self.meets_dependencies:
+            xbmc.executeJSONRPC('{"jsonrpc": "2.0", "method": "Addons.SetAddonEnabled", "params": {"addonid": "' + self.addonid + '", "enabled": true}, "id": 1}')
+            self.enabled = True
 
     def _disable(self):
         xbmc.executeJSONRPC('{"jsonrpc": "2.0", "method": "Addons.SetAddonEnabled", "params": {"addonid": "' + self.addonid + '", "enabled": false}, "id": 1}')
@@ -147,8 +153,7 @@ class Addon(object):
 
     def _add_to_database(self):
         # if all of its requirements are satisfied, go ahead and add it to the database
-        self._get_dependencies()                        
-        if self.dependencies is not None and all([Addon(a).installed for a in self.dependencies]):# and all([Addon(a).getVersion() != '0.0.0' for a in self.dependencies]):
+        if self.meets_dependencies:
             dialogger('Adding {0} to database'.format(self.addonid))
             conn = dbapi2.connect(xbmc.translatePath('special://profile/Database/Addons27.db'))
             conn.text_factory = str
