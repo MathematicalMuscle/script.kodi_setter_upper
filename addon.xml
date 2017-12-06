@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon id="script.kodi_setter_upper" name="Kodi Setter-Upper" version="0.0.11" provider-name="Mathematical Muscle">
+<addon id="script.kodi_setter_upper" name="Kodi Setter-Upper" version="0.0.12" provider-name="Mathematical Muscle">
     <requires>
         <import addon="xbmc.python" version="2.14.0"/>
         <import addon="script.common.plugin.cache" version="0.9.1" />
@@ -26,5 +26,6 @@
         v0.0.09 (2017-12-01) - Added uninstall addons functionality
         v0.0.10 (2017-12-01) - Improved XML formatting for sources
         v0.0.11 (2017-12-01) - Added disable addons functionality
+        v0.0.12 (2017-12-06) - Enable installation from a zip URL
     </news>
 </addon>

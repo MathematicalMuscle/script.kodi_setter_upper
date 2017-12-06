@@ -25,5 +25,5 @@ msgid "Show dialog boxes?"
 msgstr ""
 
 msgctxt "#32002"
-msgid "Default download path"
+msgid "Default download folder"
 msgstr ""

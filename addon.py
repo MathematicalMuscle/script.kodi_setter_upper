@@ -91,7 +91,7 @@ if __name__ == '__main__':
             x.insert()
             
         elif params.get('ksu_class') == 'Download':
-            x = classes.Source(params.get('url'), params.get('dest'), params.get('no_dialog'))
+            x = classes.Download(params.get('url'), params.get('dest'), params.get('no_dialog'))
         
     # parse the configuration files
     else:

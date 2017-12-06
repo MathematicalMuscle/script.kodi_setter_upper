@@ -42,16 +42,19 @@ class Addon(object):
         self.repo = repo
         self.url = url
         
-        self.requires = None
+        self.dependencies = None
         
         if self.addonid == 'xbmc.python':
             self.enabled = True
             self.installed = True
             
         else:
-            xbmcgui.Dialog().ok(self.addonid, self.getVersion())
-            self.enabled = self._isenabled()
-            self.installed = True if self.enabled else self._isinstalled()
+            if self.exists:
+                self.enabled = self._isenabled()
+                self.installed = True if self.enabled else self._isinstalled()
+            else:
+                self.enabled = False
+                self.installed = False
 
             # if it's not already installed and it's not supposed to be uninstalled, then install it
             if uninstall is None:
@@ -63,6 +66,10 @@ class Addon(object):
             else:
                 # if it's supposed to be uninstalled, then uninstall it
                 self.uninstall()
+    
+    @property
+    def exists(self):
+        return xbmcvfs.exists(xbmc.translatePath('special://home/addons/{0}/addon.xml'.format(self.addonid))) or self.addonid == 'xbmc.python'
 
     def setSetting(self, id, value):
         if self.installed:
@@ -73,11 +80,12 @@ class Addon(object):
             return xbmcaddon.Addon(self.addonid).getSetting(id)
             
     def getVersion(self):
-        addon_xml = xbmc.translatePath('special://home/addons/{0}/addon.xml'.format(self.addonid))
-        if xbmcvfs.exists(addon_xml):
-            tree = ET.parse(addon_xml)
-            root = tree.getroot()
-            return root.attrib['version']
+        if self.installed:
+            return xbmcaddon.Addon(self.addonid).getAddonInfo('version')
+        #if self.exists:
+        #    tree = ET.parse(addon_xml)
+        #    root = tree.getroot()
+        #    return root.attrib['version']
         else:
             return None
 
@@ -86,37 +94,38 @@ class Addon(object):
         if self.url is not None:
             self._download()
             self._zip_install()
+
+        # 2) install from a zip file
+        elif self.zippath is not None and xbmcvfs.exists(xbmc.translatePath(self.zippath)):
+            self._zip_install()
             
-        # 2) it's already installed and enabled ==> do nothing
+        # 3) it's already installed and enabled ==> do nothing
         elif self.enabled:
             return
 
-        # 3) it's already installed ==> enable it
+        # 4) it's already installed ==> enable it
         elif self.installed:
             self._enable()
             return
 
-        # 4) the `addon.xml` file already exists ==> install and enable the addon
-        elif xbmcvfs.exists(xbmc.translatePath('special://home/addons/{0}/addon.xml'.format(self.addonid))):
+        # 5) the `addon.xml` file already exists ==> install and enable the addon
+        elif self.exists:
             self._add_to_database()
 
-        # 5) install from a zip file
-        elif self.zippath is not None and xbmcvfs.exists(xbmc.translatePath(self.zippath)):
-            self._zip_install()
-
         # 6) install a dummy addon and update it from the repos
-        else:
+        elif self.repo is not None and Addon(self.repo).installed:
             self._repo_install()
         
     def uninstall(self):
-        xbmcgui.Dialog().ok('ksu', 'Uninstalling {0}'.format(self.addonid))
-        if self.installed:
-            if xbmcvfs.exists(xbmc.translatePath('special://home/addons/{0}/'.format(self.addonid))):
-                shutil.rmtree(xbmc.translatePath('special://home/addons/{0}/'.format(self.addonid)), ignore_errors=True)
+        dialogger('Uninstalling {0}'.format(self.addonid))
+        if xbmcvfs.exists(xbmc.translatePath('special://home/addons/{0}/'.format(self.addonid))):
+            shutil.rmtree(xbmc.translatePath('special://home/addons/{0}/'.format(self.addonid)), ignore_errors=True)
                 
+        if self.installed:
             xbmc.executebuiltin('XBMC.UpdateLocalAddons()')
-            self.enabled = False
-            self.installed = False
+            
+        self.enabled = False
+        self.installed = False
 
     def _isenabled(self):
         enabled_addons = eval(xbmc.executeJSONRPC('{"jsonrpc": "2.0", "method": "Addons.GetAddons", "params": {"enabled": true}, "id": 1}'))['result']
@@ -139,8 +148,8 @@ class Addon(object):
     def _add_to_database(self):
         # if all of its requirements are satisfied, go ahead and add it to the database
         self._get_dependencies()                        
-        if self.requires is not None and all([Addon(a).installed for a in self.requires]) and all([Addon(a).getVersion() != '0.0.0' for a in self.requires]):
-            xbmcgui.Dialog().ok('ksu', 'Adding {0} to database'.format(self.addonid))
+        if self.dependencies is not None and all([Addon(a).installed for a in self.dependencies]):# and all([Addon(a).getVersion() != '0.0.0' for a in self.dependencies]):
+            dialogger('Adding {0} to database'.format(self.addonid))
             conn = dbapi2.connect(xbmc.translatePath('special://profile/Database/Addons27.db'))
             conn.text_factory = str
 
@@ -153,6 +162,8 @@ class Addon(object):
 
             self.enabled = True
             self.installed = True
+        else:
+            dialogger('Dependencies not met, not adding {0} to database'.format(self.addonid))
         
     def _repo_install(self):
         # if the addon folder doesn't exist, create it
@@ -170,11 +181,11 @@ class Addon(object):
         xbmc.executebuiltin('XBMC.UpdateLocalAddons()')
         
         # if the dummy addon didn't update from a repo, then uninstall it
-        try:
-            if self.getVersion() == '0.0.0':
-                self.uninstall()
-        except:
-            pass
+        #try:
+        #    if self.getVersion() == '0.0.0':
+        #        self.uninstall()
+        #except:
+        #    pass
         
     def _zip_install(self):
         # make sure the zip file contains an `addon.xml` file
@@ -185,10 +196,17 @@ class Addon(object):
         if len(addon_xml_list) > 0:
             prefix = addon_xml_list[0][:-9]
             
+            # if the addon folder already exists, remove it
+            if xbmcvfs.exists(xbmc.translatePath('special://home/addons/{0}/'.format(self.addonid))):
+                shutil.rmtree(xbmc.translatePath('special://home/addons/{0}/'.format(self.addonid)), ignore_errors=True)
+            
             # unzip the contents into the addon's folder            
             if prefix == '':
                 path = xbmc.translatePath('special://home/addons/{0}'.format(self.addonid))
-                z_in.extractall(path)                
+                z_in.extractall(path)       
+            elif prefix == self.addonid:
+                path = xbmc.translatePath('special://home/addons')
+                z_in.extractall(path)
             else:
                 path = xbmc.translatePath('special://home/addons')
                 z_in.extractall(path)
@@ -197,9 +215,13 @@ class Addon(object):
             self._add_to_database()
     
     def _download(self):
-        url = self.url
-        dest = os.path.join(xbmcaddon.Addon('script.kodi_setter_upper').getSetting('download_path'), self.addonid + '.zip')
-        d = Download(url, dest)
+        download_folder = xbmcaddon.Addon('script.kodi_setter_upper').getSetting('download_folder')
+        if download_folder == '':
+            download_folder = xbmc.translatePath('special://userdata/addon_data/script.kodi_setter_upper/downloads')
+            xbmcaddon.Addon('script.kodi_setter_upper').setSetting('download_folder', download_folder)
+            
+        self.zippath = os.path.join(xbmc.translatePath(download_folder), self.addonid + '.zip')
+        d = Download(self.url, self.zippath)
         
     def _get_dependencies(self):     
         addon_xml = xbmc.translatePath('special://home/addons/{0}/addon.xml'.format(self.addonid))
@@ -208,13 +230,13 @@ class Addon(object):
             tree = ET.parse(addon_xml)
             root = tree.getroot()
             
-            requires = root.find('requires')
-            if requires is not None:
-                self.requires = [r.attrib['addon'] for r in requires]
+            dependencies = root.find('requires')
+            if dependencies is not None:
+                self.dependencies = [r.attrib['addon'] for r in dependencies]
             else:
-                self.requires = []
+                self.dependencies = []
         else:
-            self.requires = None
+            self.dependencies = None
 
 
 class Skin(Addon):
@@ -251,9 +273,6 @@ class Skin(Addon):
                 xbmc.executebuiltin("Skin.SetBool({0}, {1})".format(id, value))
             else:
                 xbmc.executebuiltin("Skin.SetString({0}, {1})".format(id, value))
-
-    #def getSetting(self, id):
-    #    return xbmcaddon.Addon(self.addonid).getSetting(id)
 
 
 class GUI(object):
@@ -323,32 +342,36 @@ class Source(object):
 
 class Download(object):
     def __init__(self, url, dest=None, no_dialog=None):
-        # https://github.com/tvaddonsco/plugin.program.indigo/blob/master/installer.py#L987
+        if dest is None:
+            xbmcgui.Dialog().ok('Kodi Setter-Upper', '`Download()` -- argument `dest` cannot be `None`')
+            raise TypeError
+            
         self.url = url
+        self.dest = xbmc.translatePath(dest)
+           
+        # if the destination folder doesn't exist, create it
+        if not xbmcvfs.exists(os.path.dirname(self.dest)):
+            xbmcvfs.mkdir(os.path.dirname(self.dest))
+            
+        # if the destination file exists, delete it
+        if xbmcvfs.exists(self.dest):
+            xbmcvfs.delete(self.dest)
         
-        if dest is not None:
-            self.dest = xbmc.translatePath(dest)
+        # https://github.com/tvaddonsco/plugin.program.indigo/blob/master/installer.py#L987
+        if no_dialog is None:
+            # create a Dialog Progress box
+            dp = xbmcgui.DialogProgress()
+            dp.create("Download Progress:", "", '', 'Please Wait')                
+            dp.update(0, "Downloading: " + os.path.basename(dest), '', 'Please Wait')
             
-            # if the destination folder doesn't exist, create it
-            if not xbmcvfs.exists(os.path.dirname(self.dest)):
-                xbmcvfs.mkdir(os.path.dirname(self.dest))
-                
-            # if the destination file exists, delete it
-            if xbmcvfs.exists(self.dest):
-                xbmcvfs.delete(self.dest)
+            # download the file
+            urllib.urlretrieve(self.url, self.dest, lambda nb, bs, fs, url=self.url: _pbhook(nb, bs, fs, url, dp))
             
-            if no_dialog is None:
-                # create a Dialog Progress box
-                dp = xbmcgui.DialogProgress()
-                dp.create("Download Progress:", "", '', 'Please Wait')                
-                dp.update(0, "Downloading: " + self.addonid, '', 'Please Wait')
+        else:
+            # download the file
+            urllib.urlretrieve(self.url, self.dest)
                 
-                # download the file
-                urllib.urlretrieve(self.url, self.dest, lambda nb, bs, fs, url=self.url: _pbhook(nb, bs, fs, url, dp))
-                
-            else:
-                # download the file
-                urllib.urlretrieve(self.url, self.dest)
+        
 
 
 def indent(elem, level=0):
