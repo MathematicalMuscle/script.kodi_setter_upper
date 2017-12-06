@@ -197,19 +197,9 @@ class Addon(object):
             self._add_to_database()
     
     def _download(self):
-        # https://github.com/tvaddonsco/plugin.program.indigo/blob/master/installer.py#L987
         url = self.url
-        
-        dp = xbmcgui.DialogProgress()
-        dp.create("Download Progress:", "", '', 'Please Wait')
-        
-        self.zippath = 'special://temp/{0}.zip'.format(self.addonid)
-        dest = xbmc.translatePath(self.zippath)
-        if xbmcvfs.exists(dest):
-            xbmcvfs.delete(dest)
-            
-        dp.update(0, "Downloading: " + self.addonid, '', 'Please Wait')
-        urllib.urlretrieve(url, dest, lambda nb, bs, fs, url=url: _pbhook(nb, bs, fs, url, dp))
+        dest = os.path.join(xbmcaddon.Addon('script.kodi_setter_upper').getSetting('download_path'), self.addonid + '.zip')
+        d = Download(url, dest)
         
     def _get_dependencies(self):     
         addon_xml = xbmc.translatePath('special://home/addons/{0}/addon.xml'.format(self.addonid))
@@ -329,6 +319,36 @@ class Source(object):
                             
                 else:
                     dialogger("No changes to `userdata/sources.xml`")
+
+
+class Download(object):
+    def __init__(self, url, dest=None, no_dialog=None):
+        # https://github.com/tvaddonsco/plugin.program.indigo/blob/master/installer.py#L987
+        self.url = url
+        
+        if dest is not None:
+            self.dest = xbmc.translatePath(dest)
+            
+            # if the destination folder doesn't exist, create it
+            if not xbmcvfs.exists(os.path.dirname(self.dest)):
+                xbmcvfs.mkdir(os.path.dirname(self.dest))
+                
+            # if the destination file exists, delete it
+            if xbmcvfs.exists(self.dest):
+                xbmcvfs.delete(self.dest)
+            
+            if no_dialog is None:
+                # create a Dialog Progress box
+                dp = xbmcgui.DialogProgress()
+                dp.create("Download Progress:", "", '', 'Please Wait')                
+                dp.update(0, "Downloading: " + self.addonid, '', 'Please Wait')
+                
+                # download the file
+                urllib.urlretrieve(self.url, self.dest, lambda nb, bs, fs, url=self.url: _pbhook(nb, bs, fs, url, dp))
+                
+            else:
+                # download the file
+                urllib.urlretrieve(self.url, self.dest)
 
 
 def indent(elem, level=0):

@@ -2,5 +2,6 @@
 <settings>
   <category label="32000">
     <setting label="32001" id="dialog" type="bool" default="false"/>
+    <setting label="32002" id="download_path" type="folder" source="auto" value="special://userdata/addon_data/script.kodi_setter_upper/downloads"/>
   </category>
 </settings>

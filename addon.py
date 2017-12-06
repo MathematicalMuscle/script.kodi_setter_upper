@@ -89,6 +89,9 @@ if __name__ == '__main__':
         elif params.get('ksu_class') == 'Source':
             x = classes.Source(params.get('sourcetype'), params.get('name'), params.get('path'), params.get('allowsharing'), params.get('pathversion'))
             x.insert()
+            
+        elif params.get('ksu_class') == 'Download':
+            x = classes.Source(params.get('url'), params.get('dest'), params.get('no_dialog'))
         
     # parse the configuration files
     else:
