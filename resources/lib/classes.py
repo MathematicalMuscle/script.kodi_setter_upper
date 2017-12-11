@@ -245,7 +245,7 @@ class Addon(object):
 
 
 class Skin(Addon):
-    def __init__(self, addonid, zippath=None, repo=None, uninstall=None, disable=None):
+    def __init__(self, addonid, zippath=None, repo=None, url=None, uninstall=None, disable=None):
         self.addonid = addonid
         self.zippath = zippath
         self.repo = repo
