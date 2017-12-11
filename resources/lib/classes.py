@@ -249,6 +249,7 @@ class Skin(Addon):
         self.addonid = addonid
         self.zippath = zippath
         self.repo = repo
+        self.url = url
 
         self.enabled = self._isenabled()
         self.installed = True if self.enabled else self._isinstalled()
