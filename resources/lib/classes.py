@@ -44,7 +44,7 @@ class Addon(object):
         
         self.dependencies = None
         
-        if self.addonid == 'xbmc.python':
+        if self.addonid in ['xbmc.python', 'repository.xbmc.org']:
             self.enabled = True
             self.installed = True
             
