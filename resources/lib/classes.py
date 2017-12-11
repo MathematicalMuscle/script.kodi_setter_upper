@@ -316,7 +316,7 @@ class Source(object):
     def insert(self):
         if None not in [self.sourcetype, self.name, self.path]:
             # Kodi's "sources.xml" file
-            kodi_sources_xml = xbmc.translatePath('special://home/userdata/sources.xml')
+            kodi_sources_xml = xbmc.translatePath('special://userdata/sources.xml')
             if not xbmcvfs.exists(kodi_sources_xml):
                 xbmcgui.Dialog().ok("Kodi Setter-Upper", "`userdata/sources.xml` does not exist")
             
