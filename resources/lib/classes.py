@@ -318,7 +318,7 @@ class Source(object):
             # Kodi's "sources.xml" file
             kodi_sources_xml = xbmc.translatePath('special://userdata/sources.xml')
             if not xbmcvfs.exists(kodi_sources_xml):
-                xbmcgui.Dialog().ok("Kodi Setter-Upper", "`userdata/sources.xml` does not exist")
+                dialogger("`userdata/sources.xml` does not exist")
             
             else:
                 tree = ET.parse(kodi_sources_xml)
@@ -327,20 +327,18 @@ class Source(object):
                 dialogger(self.path)
                 
                 if self.path not in [s.text for source in branch for s in source if s.tag == 'path']:
+                    # insert the source and format the XML text
                     branch.insert(-1, self.element)
-                    
-                    dialogger("Writing `userdata/sources.xml`")
                     indent(tree.getroot())
-                    tree.write(kodi_sources_xml, encoding='UTF-8')
-                    
-                    with open(kodi_sources_xml, 'r+') as f:
-                        lines = f.read().splitlines(True)
-                        f.seek(0)
-
-                        # declaration exists --> omit it
-                        if lines[0].startswith('<?'):
-                            f.writelines(lines[1:])
-                            f.truncate()
+                    xml_lines = ET.tostring(root, encoding='UTF-8', method='xml').split('\n')
+                    if xml_lines[0].startswith('<?'):
+                        xml_str = '\n'.join(xml_lines[1:])
+                    else:
+                        xml_str = '\n'.join(xml_lines)
+                        
+                    dialogger("Writing `userdata/sources.xml`")
+                    with open(xbmc.translatePath('special://userdata/sources.xml'), 'w') as f:
+                        f.write(xml_str)
                             
                 else:
                     dialogger("No changes to `userdata/sources.xml`")
