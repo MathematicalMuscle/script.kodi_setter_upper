@@ -13,7 +13,7 @@ There are two ways to use this addon via JSON-RPC: URL and command line.  For ex
 
 * Modify the IP address and port and go to this URL in your browser:
 
-  [http://10.0.0.120:8080/jsonrpc?request={"jsonrpc":"2.0","id":1,"method":"Addons.ExecuteAddon","params":{"addonid":"script.kodi_setter_upper","params":{"ksu_class":"Addon","addonid":"script.kodi_setter_upper", "id":"dialog", "value":"true"}}}](http://10.0.0.120:8080/jsonrpc?request={"jsonrpc":"2.0","id":1,"method":"Addons.ExecuteAddon","params":{"addonid":"script.kodi_setter_upper","params":{"ksu_class":"Addon","addonid":"script.kodi_setter_upper", "id":"dialog", "value":"true"}}})
+  [http://10.0.0.120:8080/jsonrpc?request={"jsonrpc":"2.0","id":1,"method":"Addons.ExecuteAddon","params":{"addonid":"script.kodi_setter_upper","params":{"ksu_class":"Addon","addonid":"script.kodi_setter_upper","id":"dialog","value":"true"}}}](http://10.0.0.120:8080/jsonrpc?request={"jsonrpc":"2.0","id":1,"method":"Addons.ExecuteAddon","params":{"addonid":"script.kodi_setter_upper","params":{"ksu_class":"Addon","addonid":"script.kodi_setter_upper","id":"dialog","value":"true"}}})
 
 * Execute the following commands in the terminal:
 
