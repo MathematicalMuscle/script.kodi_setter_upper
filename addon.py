@@ -71,7 +71,7 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         params = {}
         for arg in sys.argv[1:]:
-            params[str(arg.split('=')[0])] = str(arg.split('=')[1])
+            params[str(arg.split('=')[0])] = str(arg.split('=', 1)[1])
             
         if params.get('ksu_class') == 'Addon' and 'addonid' in params:
             x = classes.Addon(params['addonid'], params.get('zippath'), params.get('repo'), params.get('url'), params.get('uninstall'), params.get('disable'))
