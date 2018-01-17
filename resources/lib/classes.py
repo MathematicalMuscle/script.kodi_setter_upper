@@ -19,8 +19,9 @@ import zipfile
 from dialogger import dialogger
 
 
+dummy_version = '0.0.0mm'
 dummy_addon_xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
-dummy_addon_xml += '<addon id="{0}" name="{0}" version="0.0.0" provider-name="Mathematical Muscle">\n'
+dummy_addon_xml += '<addon id="{0}" name="{0}" version="' + dummy_version + '" provider-name="Mathematical Muscle">\n'
 dummy_addon_xml += '    <requires>\n'
 dummy_addon_xml += '        <import addon="xbmc.python" version="2.14.0"/>\n'
 dummy_addon_xml += '    </requires>\n'
@@ -68,29 +69,37 @@ class Addon(object):
                 self.uninstall()
     
     @property
+    def addon_xml(self):
+        return xbmc.translatePath('special://home/addons/{0}/addon.xml'.format(self.addonid))
+
+    @property
     def exists(self):
-        return xbmcvfs.exists(xbmc.translatePath('special://home/addons/{0}/addon.xml'.format(self.addonid))) or self.addonid == 'xbmc.python'
+        return xbmcvfs.exists(self.addon_xml) or self.addonid == 'xbmc.python'
         
     @property
     def meets_dependencies(self):
         self._get_dependencies()
-        return self.dependencies is not None and all([Addon(a).installed for a in self.dependencies]) # and all([Addon(a).getVersion() != '0.0.0' for a in self.dependencies])
+        return self.dependencies is not None and all([Addon(a).installed for a in self.dependencies]) # and all([Addon(a).getVersion() != dummy_version for a in self.dependencies])
 
     def setSetting(self, id, value):
-        if self.enabled:
+        if self.enabled:# and self.getVersion() != dummy_version:
             xbmcaddon.Addon(self.addonid).setSetting(id, value)
 
     def getSetting(self, id):
-        if self.enabled:
+        if self.enabled and self.getVersion() != dummy_version:
             return xbmcaddon.Addon(self.addonid).getSetting(id)
             
     def getVersion(self):
         if self.enabled:
-            return xbmcaddon.Addon(self.addonid).getAddonInfo('version')
-        #if self.exists:
-        #    tree = ET.parse(addon_xml)
-        #    root = tree.getroot()
-        #    return root.attrib['version']
+            try:
+                return xbmcaddon.Addon(self.addonid).getAddonInfo('version')
+            except:
+                if self.exists:
+                    tree = ET.parse(self.addon_xml)
+                    root = tree.getroot()
+                    return root.attrib['version']
+                else:
+                    return None
         else:
             return None
 
@@ -176,7 +185,7 @@ class Addon(object):
             xbmcvfs.mkdir(xbmc.translatePath('special://home/addons/{0}'.format(self.addonid)))
 
         # if an `addon.xml` doesn't exist, create a dummy one
-        with open(xbmc.translatePath('special://home/addons/{0}/addon.xml'.format(self.addonid)), 'w') as f:
+        with open(self.addon_xml, 'w') as f:
             f.write(dummy_addon_xml.format(self.addonid))
 
         self._add_to_database()
@@ -187,7 +196,7 @@ class Addon(object):
         
         # if the dummy addon didn't update from a repo, then uninstall it
         #try:
-        #    if self.getVersion() == '0.0.0':
+        #    if self.getVersion() == dummy_version:
         #        self.uninstall()
         #except:
         #    pass
@@ -229,10 +238,8 @@ class Addon(object):
         d = Download(self.url, self.zippath)
         
     def _get_dependencies(self):     
-        addon_xml = xbmc.translatePath('special://home/addons/{0}/addon.xml'.format(self.addonid))
-        
-        if xbmcvfs.exists(addon_xml):
-            tree = ET.parse(addon_xml)
+        if xbmcvfs.exists(self.addon_xml):
+            tree = ET.parse(self.addon_xml)
             root = tree.getroot()
             
             dependencies = root.find('requires')
@@ -270,11 +277,11 @@ class Skin(Addon):
         return xbmc.translatePath('special://skin').strip(os.sep).split(os.sep)[-1] == self.addonid
 
     def set_as_current(self):
-        if self.installed:
+        if self.installed and self.getVersion() != dummy_version:
             xbmc.executeJSONRPC('{"jsonrpc":"2.0","method":"Settings.SetSettingValue","id":1,"params":{"setting":"lookandfeel.skin","value":"' + self.addonid + '"}}')
 
     def setSetting(self, id, value):
-        if self.iscurrent():
+        if self.iscurrent() and self.getVersion() != dummy_version:
             if value in ['True', 'False']:
                 xbmc.executebuiltin("Skin.SetBool({0}, {1})".format(id, value))
             else:
