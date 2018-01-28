@@ -4,7 +4,7 @@
   <setting id="filelists.showhidden" value="true" />
   <setting id="services.webserver" value="true" />
   <setting id="services.esallinterfaces" value="true" />
-  <setting id="services.upnplookforexternalsubtitles" value="false" />
+  <setting id="services.upnplookforexternalsubtitles" value="true" />
   <setting id="services.upnprenderer" value="true" />
   <setting id="addons.unknownsources" value="true" />
   <setting id="audiooutput.guisoundmode" value="0" />

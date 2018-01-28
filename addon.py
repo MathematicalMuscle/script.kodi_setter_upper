@@ -92,6 +92,10 @@ if __name__ == '__main__':
             
         elif params.get('ksu_class') == 'Download':
             x = classes.Download(params.get('url'), params.get('dest'), params.get('no_dialog'))
+
+        elif params.get('ksu_class') == 'AdvancedSetting':
+            if 'id' in params and 'value' in params:
+                x = classes.AdvancedSetting(params.get('id'), params.get('value'))
         
     # parse the configuration files
     else:

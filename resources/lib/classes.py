@@ -294,6 +294,48 @@ class GUI(object):
             xbmc.executeJSONRPC('{"jsonrpc":"2.0", "id":1, "method":"Settings.SetSettingValue","params":{"setting":"' + id + '","value":' + value + '}}')
         else:
             xbmc.executeJSONRPC('{"jsonrpc":"2.0", "id":1, "method":"Settings.SetSettingValue","params":{"setting":"' + id + '","value":"' + value + '"}}')
+
+
+class AdvancedSetting(object):
+    def __init__(self, id, value):
+        advancedsettings_xml = xbmc.translatePath('special://userdata/advancedsettings.xml')
+        
+        # create the 'advancedsettings.xml' file if it doesn't exist
+        if not xbmcvfs.exists(advancedsettings_xml):
+            with open(advancedsettings_xml, 'w') as f:
+                f.write('<advancedsettings>\n</advancedsettings>')
+            dialogger("Created `userdata/advancedsettings.xml`")
+                
+        # insert the setting into 'advancedsettings.xml'
+        tree = ET.parse(advancedsettings_xml)
+        root = tree.getroot()
+        parent = root
+        
+        for setting in id.split('.'):
+            # if the setting doesn't exist, insert it
+            if setting not in [child.tag for child in parent]:
+                _setting = ET.Element(setting)
+                parent.insert(-1, _setting)
+                sort_children(parent)
+            
+            # get the setting element
+            sort_children(parent)
+            parent = parent.find(setting)
+            
+        # set the setting
+        parent.text = value
+        
+        # write the xml file  
+        indent(tree.getroot())      
+        xml_lines = ET.tostring(root, encoding='UTF-8', method='xml').split('\n')
+        if xml_lines[0].startswith('<?'):
+            xml_str = '\n'.join(xml_lines[1:])
+        else:
+            xml_str = '\n'.join(xml_lines)
+        
+        dialogger("Writing `userdata/advancedsettings.xml`")
+        with open(advancedsettings_xml, 'w') as f:
+            f.write(xml_str)
             
 
 class Source(object):
@@ -413,3 +455,8 @@ def _pbhook(numblocks, blocksize, filesize, url, dp):
     if dp.iscanceled():
         raise Exception("Canceled")
         dp.close()
+        
+        
+def sort_children(parent):
+    # https://stackoverflow.com/a/25339725
+    parent[:] = sorted(parent, key=lambda child: child.tag)
