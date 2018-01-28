@@ -4,8 +4,10 @@
 
 
 import xbmc
+import xbmcgui
 import xbmcvfs
 
+import os
 import sys
 
 from resources.lib import classes, sources, utils, xml_parser
@@ -49,6 +51,11 @@ addons_xml = xbmc.translatePath('special://userdata/addon_data/script.kodi_sette
 if not xbmcvfs.exists(addons_xml):
     xbmcvfs.copy(xbmc.translatePath('special://home/addons/script.kodi_setter_upper/config/addons.xml'), addons_xml)
 
+# create 'advancedsettings.xml'
+advancedsettings_xml = xbmc.translatePath('special://userdata/addon_data/script.kodi_setter_upper/config/advancedsettings.xml')
+if not xbmcvfs.exists(advancedsettings_xml):
+    xbmcvfs.copy(xbmc.translatePath('special://home/addons/script.kodi_setter_upper/config/advancedsettings.xml'), advancedsettings_xml)
+
 # create 'guisettings.xml'
 guisettings_xml = xbmc.translatePath('special://userdata/addon_data/script.kodi_setter_upper/config/guisettings.xml')
 if not xbmcvfs.exists(guisettings_xml):
@@ -57,13 +64,14 @@ if not xbmcvfs.exists(guisettings_xml):
 # create 'skin.xml'
 skin_xml = xbmc.translatePath('special://userdata/addon_data/script.kodi_setter_upper/config/skin.xml')
 if not xbmcvfs.exists(skin_xml):
-    with open(skin_xml, 'w') as f:
-        f.write('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<skins>\n</skins>')
+    xbmcvfs.copy(xbmc.translatePath('special://home/addons/script.kodi_setter_upper/config/skin.xml'), skin_xml)
 
 # create 'sources.xml'
 sources_xml = xbmc.translatePath('special://userdata/addon_data/script.kodi_setter_upper/config/sources.xml')
 if not xbmcvfs.exists(sources_xml):
-    xbmcvfs.copy(xbmc.translatePath('special://userdata/addon_data/script.kodi_setter_upper/config/sources.xml'), sources_xml)
+    xbmcvfs.copy(xbmc.translatePath('special://home/addons/script.kodi_setter_upper/config/sources.xml'), sources_xml)
+    
+config_dir = xbmc.translatePath('special://userdata/addon_data/script.kodi_setter_upper/config/')
 
 
 if __name__ == '__main__':
@@ -99,23 +107,47 @@ if __name__ == '__main__':
         
     # parse the configuration files
     else:
-        sources_xml = xbmc.translatePath('special://userdata/addon_data/script.kodi_setter_upper/config/sources.xml')
-        sources.modify(sources_xml)
+        opts = ["Apply 'addons.xml' settings",
+                "Apply 'advancedsettings.xml' settings",
+                "Apply 'guisettings.xml' settings",
+                "Apply 'skin.xml' settings",
+                "Load 'keymap.xml' keymaps",
+                "Load 'sources.xml' sources"]
 
-        # modify GUI settings
-        xml_parser.parse(guisettings_xml, classes.GUI)
+        select = xbmcgui.Dialog().select('Kodi Setter-Upper', opts, 0)
+        if select >= 0:
+            selection = opts[select]
+            
+            if selection == "Apply 'addons.xml' settings":
+                addons_xml = xbmcgui.Dialog().browse(1, 'Kodi Setter-Upper', 'files', mask='.xml', defaultt=config_dir)
+                if os.path.isfile(addons_xml):
+                    xml_parser.parse(addons_xml, classes.Addon)
+                
+            elif selection == "Apply 'advancedsettings.xml' settings":
+                advancedsettings_xml = xbmcgui.Dialog().browse(1, 'Kodi Setter-Upper', 'files', mask='.xml', defaultt=config_dir)
+                if os.path.isfile(advancedsettings_xml):
+                    xml_parser.parse(advancedsettings_xml, classes.AdvancedSetting)
+                
+            elif selection == "Apply 'guisettings.xml' settings":
+                guisettings_xml = xbmcgui.Dialog().browse(1, 'Kodi Setter-Upper', 'files', mask='.xml', defaultt=config_dir)
+                if os.path.isfile(guisettings_xml):
+                    xml_parser.parse(guisettings_xml, classes.GUI)
+                
+            elif selection == "Apply 'skin.xml' settings":
+                skin_xml = xbmcgui.Dialog().browse(1, 'Kodi Setter-Upper', 'files', mask='.xml', defaultt=config_dir)
+                if os.path.isfile(skin_xml):
+                    xml_parser.parse(skin_xml, classes.Skin)
+                
+            elif selection == "Load 'keymap.xml' keymaps":
+                keymap_xml = xbmcgui.Dialog().browse(1, 'Kodi Setter-Upper', 'files', mask='.xml', defaultt=xbmc.translatePath('special://userdata/addon_data/script.kodi_setter_upper/keymaps/'))
+                if os.path.isfile(keymap_xml):
+                    with open(keymap_xml, 'r') as f:
+                        text = f.read()
+                    with open(xbmc.translatePath('special://userdata/keymaps/keymap.xml'), 'w') as f:
+                        f.write(text)
+                
+            elif selection == "Load 'sources.xml' sources":
+                sources_xml = xbmcgui.Dialog().browse(1, 'Kodi Setter-Upper', 'files', mask='.xml', defaultt=config_dir)
+                if os.path.isfile(sources_xml):
+                    sources.modify(sources_xml)
 
-        # install and configure addons
-        xml_parser.parse(addons_xml, classes.Addon)
-
-        # install and configure the skin
-        xml_parser.parse(skin_xml, classes.Skin)
-        xbmc.executebuiltin("ReloadSkin")
-
-        # create "keymap.xml"
-        keymap_xml = xbmc.translatePath('special://userdata/addon_data/script.kodi_setter_upper/keymaps/{0}_keymap.xml'.format(utils.PLATFORM))
-        if xbmcvfs.exists(keymap_xml):
-            with open(keymap_xml, 'r') as f:
-                text = f.read()
-            with open(xbmc.translatePath('special://userdata/keymaps/keymap.xml'), 'w') as f:
-                f.write(text)
