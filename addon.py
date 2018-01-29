@@ -112,7 +112,8 @@ if __name__ == '__main__':
                 "Apply 'guisettings.xml' settings",
                 "Apply 'skin.xml' settings",
                 "Load 'keymap.xml' keymaps",
-                "Load 'sources.xml' sources"]
+                "Load 'sources.xml' sources",
+                "View a text file"]
 
         select = xbmcgui.Dialog().select('Kodi Setter-Upper', opts, 0)
         if select >= 0:
@@ -150,4 +151,11 @@ if __name__ == '__main__':
                 sources_xml = xbmcgui.Dialog().browse(1, 'Kodi Setter-Upper', 'files', mask='.xml', defaultt=config_dir)
                 if os.path.isfile(sources_xml):
                     sources.modify(sources_xml)
+
+            elif selection == "View a text file":
+                textfile = xbmcgui.Dialog().browse(1, 'Kodi Setter-Upper', 'files', defaultt=xbmc.translatePath('special://home'))
+                if os.path.isfile(textfile):
+                    with open(textfile, 'r') as f:
+                        text = f.read()
+                    xbmcgui.Dialog().textviewer(os.path.basename(textfile), text)
 
