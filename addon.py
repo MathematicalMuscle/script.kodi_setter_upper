@@ -10,7 +10,7 @@ import xbmcvfs
 import os
 import sys
 
-from resources.lib import classes, sources, utils, xml_parser
+from resources.lib import classes, sources, utils, xml_parser, get_local_ip_address
 
 
 # create the "Kodi Setter Upper" folder in addon_data
@@ -111,6 +111,7 @@ if __name__ == '__main__':
                 "Apply 'advancedsettings.xml' settings",
                 "Apply 'guisettings.xml' settings",
                 "Apply 'skin.xml' settings",
+                "Get local IP address",
                 "Load 'keymap.xml' keymaps",
                 "Load 'sources.xml' sources",
                 "View a text file"]
@@ -138,6 +139,10 @@ if __name__ == '__main__':
                 skin_xml = xbmcgui.Dialog().browse(1, 'Kodi Setter-Upper', 'files', mask='.xml', defaultt=config_dir)
                 if os.path.isfile(skin_xml):
                     xml_parser.parse(skin_xml, classes.Skin)
+                
+            elif selection == "Get local IP address":
+                local_ip_address = get_local_ip_address.get_local_ip_address()
+                xbmcgui.Dialog().ok('Local IP Address', local_ip_address)
                 
             elif selection == "Load 'keymap.xml' keymaps":
                 keymap_xml = xbmcgui.Dialog().browse(1, 'Kodi Setter-Upper', 'files', mask='.xml', defaultt=xbmc.translatePath('special://userdata/addon_data/script.kodi_setter_upper/keymaps/'))
