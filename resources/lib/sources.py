@@ -11,8 +11,12 @@ import xbmcvfs
 
 import xml.etree.ElementTree as ET
 
-from dialogger import dialogger
+PY2 = sys.version_info[0] == 2
 
+if not PY2:
+    from .dialogger import dialogger
+else:
+    from dialogger import dialogger
 
 
 def modify(sources_xml):

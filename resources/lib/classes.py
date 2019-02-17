@@ -4,6 +4,8 @@
 
 
 import os
+import sys
+
 import xbmc
 import xbmcaddon
 import xbmcgui
@@ -12,11 +14,17 @@ import xbmcvfs
 import datetime
 import shutil
 from sqlite3 import dbapi2
-import urllib
 import xml.etree.ElementTree as ET
 import zipfile
 
-from dialogger import dialogger
+PY2 = sys.version_info[0] == 2
+
+if not PY2:
+    import urllib.request, urllib.parse, urllib.error
+    from .dialogger import dialogger
+else:
+    import urllib
+    from dialogger import dialogger
 
 
 dummy_version = '0.0.0mm'
@@ -418,13 +426,17 @@ class Download(object):
             dp.update(0, "Downloading: " + os.path.basename(dest), '', 'Please Wait')
             
             # download the file
-            urllib.urlretrieve(self.url, self.dest, lambda nb, bs, fs, url=self.url: _pbhook(nb, bs, fs, url, dp))
+            if not PY2:
+                urllib.request.urlretrieve(self.url, self.dest, lambda nb, bs, fs, url=self.url: _pbhook(nb, bs, fs, url, dp))
+            else:
+                urllib.urlretrieve(self.url, self.dest, lambda nb, bs, fs, url=self.url: _pbhook(nb, bs, fs, url, dp))
             
         else:
             # download the file
-            urllib.urlretrieve(self.url, self.dest)
-                
-        
+            if not PY2:
+                urllib.request.urlretrieve(self.url, self.dest)
+            else:
+                urllib.urlretrieve(self.url, self.dest)
 
 
 def indent(elem, level=0):
